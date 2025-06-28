@@ -2,8 +2,8 @@ import type { StatInkPostBody, VsHistoryDetail } from "./types.ts";
 
 export const AGENT_NAME = "s3si.ts";
 export const S3SI_VERSION = "0.4.20";
-export const NSOAPP_VERSION = "2.12.0";
-export const WEB_VIEW_VERSION = "6.0.0-9f87c815";
+export const NSOAPP_VERSION = "3.0.2";
+export const WEB_VIEW_VERSION = "10.0.0-cba84fcd";
 export enum Queries {
   HomeQuery =
     "51fc56bbf006caf37728914aa8bc0e2c86a80cf195b4d4027d6822a3623098a8",
@@ -22,7 +22,7 @@ export enum Queries {
   VsHistoryDetailQuery =
     "20f88b10d0b1d264fcb2163b0866de26bbf6f2b362f397a0258a75b7fa900943",
   CoopHistoryQuery =
-    "0f8c33970a425683bb1bdecca50a0ca4fb3c3641c0b2a1237aedfde9c0cb2b8f",
+    "e11a8cf2c3de7348495dea5cdcaa25e0c153541c4ed63f044b6c174bc5b703df",
   CoopHistoryDetailQuery =
     "f2d55873a9281213ae27edc171e2b19131b3021a2ae263757543cdd3bf015cc8",
   myOutfitCommonDataFilteringConditionQuery =
