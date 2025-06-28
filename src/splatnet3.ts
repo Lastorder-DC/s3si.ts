@@ -64,7 +64,7 @@ export class Splatnet3 {
       if (resp.status !== 200) {
         throw new APIError({
           response: resp,
-          message: "Splatnet3 request failed",
+          message: "Splatnet3 request failed - ${query}",
         });
       }
 
