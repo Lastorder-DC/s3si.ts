@@ -66,7 +66,9 @@ results into the user's language when displayed.
   // don't change this if you don't know what it is
   "fGen": "https://nxapi.fancy.org.uk/api/znca/f",
   // OAuth 2.0 Bearer token for nxapi-znca-api authentication (optional, required if the API requires auth)
-  // Obtain from https://nxapi-auth.fancy.org.uk/oauth/clients
+  // Register a client at https://nxapi-auth.fancy.org.uk/oauth/clients and use
+  // client_credentials grant with scope "ca:gf" to obtain an access_token.
+  // See https://github.com/samuelthomas2774/nxapi-znca-api/blob/docs/docs/api-auth.md for details.
   // "nxapiAuthToken": "...",
   // if you run with -e file, this is the directory to store exported files
   "fileExportPath": "./export",
