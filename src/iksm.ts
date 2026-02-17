@@ -2,6 +2,7 @@ import { retry, urlBase64Encode } from "./utils.ts";
 import {
   DEFAULT_APP_USER_AGENT,
   NSOAPP_VERSION,
+  NXAPI_ZNCA_CLIENT_VERSION,
   USERAGENT,
   WEB_VIEW_VERSION,
 } from "./constant.ts";
@@ -128,7 +129,12 @@ export async function loginManually(
 }
 
 export async function getGToken(
-  { fApi, sessionToken, env }: { fApi: string; sessionToken: string; env: Env },
+  { fApi, nxapiAuthToken, sessionToken, env }: {
+    fApi: string;
+    nxapiAuthToken?: string;
+    sessionToken: string;
+    env: Env;
+  },
 ) {
   const fetch = env.newFetcher();
   const idResp = await fetch.post(
@@ -179,38 +185,85 @@ export async function getGToken(
   const { nickname, birthday, language, country, id: userId } = uiRespJson;
 
   const getIdToken2 = async (idToken: string) => {
-    const { f, request_id: requestId, timestamp } = await callImink({
-      fApi,
-      step: 1,
-      idToken,
-      userId,
-      env,
-    });
-    const resp = await fetch.post(
-      {
-        url: "https://api-lp1.znc.srv.nintendo.net/v3/Account/Login",
-        headers: {
-          "X-Platform": "Android",
-          "X-ProductVersion": NSOAPP_VERSION,
-          "Content-Type": "application/json; charset=utf-8",
-          "Connection": "Keep-Alive",
-          "Accept-Encoding": "gzip",
-          "User-Agent": `com.nintendo.znca/${NSOAPP_VERSION}(Android/14)`,
-        },
-        body: JSON.stringify({
+    const loginUrl = "https://api-lp1.znc.srv.nintendo.net/v4/Account/Login";
+    const { f, request_id: requestId, timestamp, encrypted_token_request } =
+      await callImink({
+        fApi,
+        nxapiAuthToken,
+        step: 1,
+        idToken,
+        userId,
+        env,
+        encrypt_token_request: {
+          url: loginUrl,
           parameter: {
-            "f": f,
+            // f, requestId, timestamp are placeholders replaced by the fgen API
+            "f": "",
             "language": language,
             "naBirthday": birthday,
             "naCountry": country,
             "naIdToken": idToken,
-            "requestId": requestId,
-            "timestamp": timestamp,
+            "requestId": "",
+            "timestamp": 0,
           },
-        }),
-      },
-    );
-    const respJson = await resp.json();
+        },
+      });
+
+    let resp: Response;
+    if (encrypted_token_request) {
+      const encryptedBody = base64ToUint8Array(encrypted_token_request);
+      resp = await fetch.post(
+        {
+          url: loginUrl,
+          headers: {
+            "X-Platform": "Android",
+            "X-ProductVersion": NSOAPP_VERSION,
+            "Content-Type": "application/octet-stream",
+            "Connection": "Keep-Alive",
+            "Accept-Encoding": "gzip",
+            "User-Agent": `com.nintendo.znca/${NSOAPP_VERSION}(Android/14)`,
+          },
+          body: encryptedBody,
+        },
+      );
+    } else {
+      resp = await fetch.post(
+        {
+          url: loginUrl,
+          headers: {
+            "X-Platform": "Android",
+            "X-ProductVersion": NSOAPP_VERSION,
+            "Content-Type": "application/json; charset=utf-8",
+            "Connection": "Keep-Alive",
+            "Accept-Encoding": "gzip",
+            "User-Agent": `com.nintendo.znca/${NSOAPP_VERSION}(Android/14)`,
+          },
+          body: JSON.stringify({
+            parameter: {
+              "f": f,
+              "language": language,
+              "naBirthday": birthday,
+              "naCountry": country,
+              "naIdToken": idToken,
+              "requestId": requestId,
+              "timestamp": timestamp,
+            },
+          }),
+        },
+      );
+    }
+
+    let respJson;
+    if (encrypted_token_request) {
+      respJson = await decryptResponse({
+        fApi,
+        nxapiAuthToken,
+        response: resp,
+        env,
+      });
+    } else {
+      respJson = await resp.json();
+    }
 
     const idToken2: string | undefined = respJson?.result
       ?.webApiServerCredential
@@ -230,37 +283,83 @@ export async function getGToken(
     return [idToken2, coralUserId] as const;
   };
   const getGToken = async (idToken: string, coralUserId: string) => {
-    const { f, request_id: requestId, timestamp } = await callImink({
-      step: 2,
-      idToken,
-      fApi,
-      userId,
-      coralUserId,
-      env,
-    });
-    const resp = await fetch.post(
-      {
-        url: "https://api-lp1.znc.srv.nintendo.net/v2/Game/GetWebServiceToken",
-        headers: {
-          "X-Platform": "Android",
-          "X-ProductVersion": NSOAPP_VERSION,
-          "Authorization": `Bearer ${idToken}`,
-          "Content-Type": "application/json; charset=utf-8",
-          "Accept-Encoding": "gzip",
-          "User-Agent": `com.nintendo.znca/${NSOAPP_VERSION}(Android/14)`,
-        },
-        body: JSON.stringify({
+    const getTokenUrl =
+      "https://api-lp1.znc.srv.nintendo.net/v2/Game/GetWebServiceToken";
+    const { f, request_id: requestId, timestamp, encrypted_token_request } =
+      await callImink({
+        step: 2,
+        idToken,
+        fApi,
+        nxapiAuthToken,
+        userId,
+        coralUserId,
+        env,
+        encrypt_token_request: {
+          url: getTokenUrl,
           parameter: {
-            "f": f,
+            // f, requestId, timestamp are placeholders replaced by the fgen API
+            "f": "",
             "id": 4834290508791808,
             "registrationToken": idToken,
-            "requestId": requestId,
-            "timestamp": timestamp,
+            "requestId": "",
+            "timestamp": 0,
           },
-        }),
-      },
-    );
-    const respJson = await resp.json();
+        },
+      });
+
+    let resp: Response;
+    if (encrypted_token_request) {
+      const encryptedBody = base64ToUint8Array(encrypted_token_request);
+      resp = await fetch.post(
+        {
+          url: getTokenUrl,
+          headers: {
+            "X-Platform": "Android",
+            "X-ProductVersion": NSOAPP_VERSION,
+            "Authorization": `Bearer ${idToken}`,
+            "Content-Type": "application/octet-stream",
+            "Accept-Encoding": "gzip",
+            "User-Agent": `com.nintendo.znca/${NSOAPP_VERSION}(Android/14)`,
+          },
+          body: encryptedBody,
+        },
+      );
+    } else {
+      resp = await fetch.post(
+        {
+          url: getTokenUrl,
+          headers: {
+            "X-Platform": "Android",
+            "X-ProductVersion": NSOAPP_VERSION,
+            "Authorization": `Bearer ${idToken}`,
+            "Content-Type": "application/json; charset=utf-8",
+            "Accept-Encoding": "gzip",
+            "User-Agent": `com.nintendo.znca/${NSOAPP_VERSION}(Android/14)`,
+          },
+          body: JSON.stringify({
+            parameter: {
+              "f": f,
+              "id": 4834290508791808,
+              "registrationToken": idToken,
+              "requestId": requestId,
+              "timestamp": timestamp,
+            },
+          }),
+        },
+      );
+    }
+
+    let respJson;
+    if (encrypted_token_request) {
+      respJson = await decryptResponse({
+        fApi,
+        nxapiAuthToken,
+        response: resp,
+        env,
+      });
+    } else {
+      respJson = await resp.json();
+    }
 
     const webServiceToken = respJson?.result?.accessToken;
 
@@ -410,34 +509,144 @@ type IminkResponse = {
   f: string;
   request_id: string;
   timestamp: number;
+  encrypted_token_request?: string;
 };
 async function callImink(
   params: {
     fApi: string;
+    nxapiAuthToken?: string;
     step: number;
     idToken: string;
     userId: string;
     coralUserId?: string;
     env: Env;
+    // deno-lint-ignore no-explicit-any
+    encrypt_token_request?: { url: string; parameter: Record<string, any> };
   },
 ): Promise<IminkResponse> {
-  const { fApi, step, idToken, userId, coralUserId, env } = params;
+  const {
+    fApi,
+    nxapiAuthToken,
+    step,
+    idToken,
+    userId,
+    coralUserId,
+    env,
+    encrypt_token_request,
+  } = params;
   const { post } = env.newFetcher();
+  const headers: Record<string, string> = {
+    "User-Agent": USERAGENT,
+    "Content-Type": "application/json",
+    "X-znca-Platform": "Android",
+    "X-znca-Version": NSOAPP_VERSION,
+    "X-znca-Client-Version": NXAPI_ZNCA_CLIENT_VERSION,
+  };
+  if (nxapiAuthToken) {
+    headers["Authorization"] = `Bearer ${nxapiAuthToken}`;
+  }
+  // deno-lint-ignore no-explicit-any
+  const body: Record<string, any> = {
+    "token": idToken,
+    "hash_method": step,
+    "na_id": userId,
+    "coral_user_id": coralUserId,
+  };
+  if (encrypt_token_request) {
+    body["encrypt_token_request"] = encrypt_token_request;
+  }
   const resp = await post({
     url: fApi,
-    headers: {
-      "User-Agent": USERAGENT,
-      "Content-Type": "application/json",
-      "X-znca-Platform": "Android",
-      "X-znca-Version": NSOAPP_VERSION,
-    },
-    body: JSON.stringify({
-      "token": idToken,
-      "hash_method": step,
-      "na_id": userId,
-      "coral_user_id": coralUserId,
-    }),
+    headers,
+    body: JSON.stringify(body),
   });
 
   return await resp.json();
+}
+
+function fApiBaseUrl(fApi: string): string {
+  if (fApi.endsWith("/f")) {
+    return fApi.slice(0, -2);
+  }
+  return fApi;
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binaryStr = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binaryStr += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binaryStr);
+}
+
+export async function encryptRequest(
+  params: {
+    fApi: string;
+    nxapiAuthToken?: string;
+    url: string;
+    token: string | null;
+    data: string;
+    env: Env;
+  },
+): Promise<Uint8Array> {
+  const { fApi, nxapiAuthToken, url, token, data, env } = params;
+  const { post } = env.newFetcher();
+  const headers: Record<string, string> = {
+    "User-Agent": USERAGENT,
+    "Content-Type": "application/json",
+    "Accept": "application/octet-stream",
+    "X-znca-Client-Version": NXAPI_ZNCA_CLIENT_VERSION,
+  };
+  if (nxapiAuthToken) {
+    headers["Authorization"] = `Bearer ${nxapiAuthToken}`;
+  }
+  const resp = await post({
+    url: `${fApiBaseUrl(fApi)}/encrypt-request`,
+    headers,
+    body: JSON.stringify({ url, token, data }),
+  });
+
+  const buf = await resp.arrayBuffer();
+  return new Uint8Array(buf);
+}
+
+async function decryptResponse(
+  params: {
+    fApi: string;
+    nxapiAuthToken?: string;
+    response: Response;
+    env: Env;
+  },
+  // deno-lint-ignore no-explicit-any
+): Promise<any> {
+  const { fApi, nxapiAuthToken, response, env } = params;
+  const { post } = env.newFetcher();
+  const encryptedBuf = await response.arrayBuffer();
+  const base64Data = uint8ArrayToBase64(new Uint8Array(encryptedBuf));
+  const headers: Record<string, string> = {
+    "User-Agent": USERAGENT,
+    "Content-Type": "application/json",
+    "Accept": "text/plain",
+    "X-znca-Client-Version": NXAPI_ZNCA_CLIENT_VERSION,
+  };
+  if (nxapiAuthToken) {
+    headers["Authorization"] = `Bearer ${nxapiAuthToken}`;
+  }
+  const decryptResp = await post({
+    url: `${fApiBaseUrl(fApi)}/decrypt-response`,
+    headers,
+    body: JSON.stringify({ data: base64Data }),
+  });
+
+  const text = await decryptResp.text();
+  return JSON.parse(text);
 }

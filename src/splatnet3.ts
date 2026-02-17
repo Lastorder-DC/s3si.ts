@@ -100,6 +100,7 @@ export class Splatnet3 {
 
     const { webServiceToken, userCountry, userLang } = await getGToken({
       fApi: state.fGen,
+      nxapiAuthToken: state.nxapiAuthToken,
       sessionToken,
       env: this.env,
     });

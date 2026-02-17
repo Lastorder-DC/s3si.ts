@@ -18,6 +18,7 @@ export type RankState = {
 export type State = {
   loginState?: LoginState;
   fGen: string;
+  nxapiAuthToken?: string;
   appUserAgent?: string;
   userLang?: string;
   userCountry?: string;
@@ -35,7 +36,7 @@ export type State = {
 
 export const DEFAULT_STATE: State = {
   cacheDir: "./cache",
-  fGen: "https://api.imink.app/f",
+  fGen: "https://nxapi.fancy.org.uk/api/znca/f",
   fileExportPath: "./export",
   monitorInterval: 500,
 };
