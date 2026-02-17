@@ -197,6 +197,7 @@ export async function getGToken(
         encrypt_token_request: {
           url: loginUrl,
           parameter: {
+            // f, requestId, timestamp are placeholders replaced by the fgen API
             "f": "",
             "language": language,
             "naBirthday": birthday,
@@ -210,10 +211,7 @@ export async function getGToken(
 
     let resp: Response;
     if (encrypted_token_request) {
-      const encryptedBody = Uint8Array.from(
-        atob(encrypted_token_request),
-        (c) => c.charCodeAt(0),
-      );
+      const encryptedBody = base64ToUint8Array(encrypted_token_request);
       resp = await fetch.post(
         {
           url: loginUrl,
@@ -299,6 +297,7 @@ export async function getGToken(
         encrypt_token_request: {
           url: getTokenUrl,
           parameter: {
+            // f, requestId, timestamp are placeholders replaced by the fgen API
             "f": "",
             "id": 4834290508791808,
             "registrationToken": idToken,
@@ -310,10 +309,7 @@ export async function getGToken(
 
     let resp: Response;
     if (encrypted_token_request) {
-      const encryptedBody = Uint8Array.from(
-        atob(encrypted_token_request),
-        (c) => c.charCodeAt(0),
-      );
+      const encryptedBody = base64ToUint8Array(encrypted_token_request);
       resp = await fetch.post(
         {
           url: getTokenUrl,
@@ -575,6 +571,23 @@ function fApiBaseUrl(fApi: string): string {
   return fApi;
 }
 
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binaryStr = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binaryStr += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binaryStr);
+}
+
 export async function encryptRequest(
   params: {
     fApi: string;
@@ -618,9 +631,7 @@ async function decryptResponse(
   const { fApi, nxapiAuthToken, response, env } = params;
   const { post } = env.newFetcher();
   const encryptedBuf = await response.arrayBuffer();
-  const base64Data = btoa(
-    String.fromCharCode(...new Uint8Array(encryptedBuf)),
-  );
+  const base64Data = uint8ArrayToBase64(new Uint8Array(encryptedBuf));
   const headers: Record<string, string> = {
     "User-Agent": USERAGENT,
     "Content-Type": "application/json",
