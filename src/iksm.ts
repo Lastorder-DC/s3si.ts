@@ -185,7 +185,7 @@ export async function getGToken(
   const { nickname, birthday, language, country, id: userId } = uiRespJson;
 
   const getIdToken2 = async (idToken: string) => {
-    const loginUrl = "https://api-lp1.znc.srv.nintendo.net/v3/Account/Login";
+    const loginUrl = "https://api-lp1.znc.srv.nintendo.net/v4/Account/Login";
     const { f, request_id: requestId, timestamp, encrypted_token_request } =
       await callImink({
         fApi,
