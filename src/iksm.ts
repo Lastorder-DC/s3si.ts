@@ -128,7 +128,12 @@ export async function loginManually(
 }
 
 export async function getGToken(
-  { fApi, sessionToken, env }: { fApi: string; sessionToken: string; env: Env },
+  { fApi, nxapiAuthToken, sessionToken, env }: {
+    fApi: string;
+    nxapiAuthToken?: string;
+    sessionToken: string;
+    env: Env;
+  },
 ) {
   const fetch = env.newFetcher();
   const idResp = await fetch.post(
@@ -181,6 +186,7 @@ export async function getGToken(
   const getIdToken2 = async (idToken: string) => {
     const { f, request_id: requestId, timestamp } = await callImink({
       fApi,
+      nxapiAuthToken,
       step: 1,
       idToken,
       userId,
@@ -234,6 +240,7 @@ export async function getGToken(
       step: 2,
       idToken,
       fApi,
+      nxapiAuthToken,
       userId,
       coralUserId,
       env,
@@ -414,6 +421,7 @@ type IminkResponse = {
 async function callImink(
   params: {
     fApi: string;
+    nxapiAuthToken?: string;
     step: number;
     idToken: string;
     userId: string;
@@ -421,16 +429,21 @@ async function callImink(
     env: Env;
   },
 ): Promise<IminkResponse> {
-  const { fApi, step, idToken, userId, coralUserId, env } = params;
+  const { fApi, nxapiAuthToken, step, idToken, userId, coralUserId, env } =
+    params;
   const { post } = env.newFetcher();
+  const headers: Record<string, string> = {
+    "User-Agent": USERAGENT,
+    "Content-Type": "application/json",
+    "X-znca-Platform": "Android",
+    "X-znca-Version": NSOAPP_VERSION,
+  };
+  if (nxapiAuthToken) {
+    headers["Authorization"] = `Bearer ${nxapiAuthToken}`;
+  }
   const resp = await post({
     url: fApi,
-    headers: {
-      "User-Agent": USERAGENT,
-      "Content-Type": "application/json",
-      "X-znca-Platform": "Android",
-      "X-znca-Version": NSOAPP_VERSION,
-    },
+    headers,
     body: JSON.stringify({
       "token": idToken,
       "hash_method": step,
